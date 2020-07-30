@@ -11,6 +11,7 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.util.AttributeSet
 import android.view.View
+import com.thelumierguy.starfield.utils.lowPass
 import com.thelumierguy.starfield.views.Star
 
 
@@ -22,7 +23,7 @@ class StarFieldView @JvmOverloads constructor(
 
     private var enableTrails: Boolean = false
 
-    var canvasCenterX = 0F
+    var translationValue = 0F
 
     private val starsArray by lazy {
         Array(800, init = {
@@ -38,27 +39,19 @@ class StarFieldView @JvmOverloads constructor(
         sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
-    var gravSensorVals = FloatArray(2048)
+    var gravityValue = FloatArray(1)
 
     private val gyroscopeSensorListener = object : SensorEventListener {
         override fun onSensorChanged(sensorEvent: SensorEvent) {
-            if (enableTrails) {
-                canvasCenterX = 0F
+            translationValue = if (enableTrails) {
+                0F
             } else {
-                lowPass(sensorEvent.values, gravSensorVals)
-                canvasCenterX -= gravSensorVals[0] + alpha * (sensorEvent.values[1] - gravSensorVals[0]).toInt()
+                lowPass(sensorEvent.values, gravityValue)
+                gravityValue[0] * 40
             }
         }
 
         override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
-    }
-    val ALPHA = 0.01f
-
-    private fun lowPass(
-        input: FloatArray,
-        output: FloatArray
-    ) {
-        output[0] = output[0] + ALPHA * (input[1] - output[0])
     }
 
     init {
@@ -73,7 +66,7 @@ class StarFieldView @JvmOverloads constructor(
         }
         canvas?.let {
             canvas.translate(
-                measuredWidth / 2F + canvasCenterX,
+                measuredWidth / 2F + translationValue,
                 measuredHeight / 2F
             )
             starsArray.forEach { star ->
@@ -93,10 +86,10 @@ class StarFieldView @JvmOverloads constructor(
     fun setTrails() {
         enableTrails = enableTrails != true
         if (enableTrails)
-            canvasCenterX = 0F
-            Handler().postDelayed({
-                enableTrails = false //disable trails after 4 seconds
-            }, 4000)
+            translationValue = 0F
+        Handler().postDelayed({
+            enableTrails = false //disable trails after 4 seconds
+        }, 4000)
     }
 
 

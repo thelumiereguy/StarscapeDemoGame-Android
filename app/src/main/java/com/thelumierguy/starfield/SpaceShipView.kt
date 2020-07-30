@@ -11,9 +11,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
-import kotlin.math.roundToInt
+import com.thelumierguy.starfield.utils.lowPass
 
 
 class SpaceShipView @JvmOverloads constructor(
@@ -22,8 +21,7 @@ class SpaceShipView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : View(context, attributeSet, defStyle) {
 
-    private var canvasCenterX: Float = 0F
-    private var roundedSensorValue = 0F
+    private var rotationValue = 0F
     val bodyPaint = Paint().apply {
         color = Color.parseColor("#3E4D6C")
     }
@@ -50,6 +48,72 @@ class SpaceShipView @JvmOverloads constructor(
         )
     }
 
+    init {
+        setLayerType(LAYER_TYPE_HARDWARE, null)
+    }
+
+    val jetOuterRadius = 36F
+    var jetInnerRadius = 20F
+
+    private val halfWidth by lazy { width / 2F }
+    private val halfHeight by lazy { height / 2F }
+
+    private val ALPHA = 0.05F
+
+    private val sensorManager by lazy {
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
+
+    private val gyroscopeSensor: Sensor by lazy {
+        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    }
+
+    var gravityValue = FloatArray(1)
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        sensorManager.registerListener(
+            gyroscopeSensorListener,
+            gyroscopeSensor, SensorManager.SENSOR_DELAY_NORMAL
+        )
+    }
+
+    private val gyroscopeSensorListener = object : SensorEventListener {
+        override fun onSensorChanged(sensorEvent: SensorEvent) {
+            processSensorEvents(sensorEvent)
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
+    }
+
+    private fun processSensorEvents(sensorEvent: SensorEvent) {
+        lowPass(sensorEvent.values,gravityValue)
+        magnifyValue()
+        invertGravityValue()
+        invalidate()
+    }
+
+    /**
+     * Invert the gravityValue, so that the ship will pop out of the other side
+     * Ideally it should be 20F, but partially drawing ship on both sides, causes it to blink
+     */
+    private fun invertGravityValue() {
+        when {
+            rotationValue < -90 -> {
+                gravityValue[0] += 18F
+            }
+            rotationValue > 90 -> {
+                gravityValue[0] -= 18F
+            }
+            else -> {
+            }
+        }
+    }
+
+    private fun magnifyValue() {
+        rotationValue = 10 * gravityValue[0]
+    }
+
     fun boost() {
         jetPaint.color = Color.parseColor("#F2463B")
         jetInnerRadius = 30F
@@ -59,16 +123,11 @@ class SpaceShipView @JvmOverloads constructor(
         }, 4000)
     }
 
-    init {
-        setLayerType(LAYER_TYPE_HARDWARE, null)
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        sensorManager.unregisterListener(gyroscopeSensorListener)
     }
-
-    val jetOuterRadius = 36F
-    var jetInnerRadius = 20F
-
-    val halfWidth by lazy { width / 2F }
-    val halfHeight by lazy { height / 2F }
-    var currentSpeed = 0F
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
@@ -77,18 +136,27 @@ class SpaceShipView @JvmOverloads constructor(
         }
         canvas?.let {
             canvas.rotate(
-                currentSpeed,
+                rotationValue,
                 halfWidth,
                 height.toFloat()
             )
-            drawRhombus(it)
-            it.drawLine(halfWidth, halfHeight, halfWidth, height / 2.6F, wingsPaintOutline)
-            it.drawCircle(halfWidth, halfHeight, jetOuterRadius, bodyPaint)
-            it.drawCircle(halfWidth, halfHeight, jetInnerRadius, jetPaint)
+            drawShipOutline(it)
+            drawShipAntenna(it)
+            drawShipExhaust(it)
         }
     }
 
-    private fun drawRhombus(canvas: Canvas) {
+    private fun drawShipExhaust(it: Canvas) {
+        it.drawCircle(halfWidth, halfHeight, jetOuterRadius, bodyPaint)
+        it.drawCircle(halfWidth, halfHeight, jetInnerRadius, jetPaint)
+    }
+
+    private fun drawShipAntenna(it: Canvas) {
+        it.drawLine(halfWidth, halfHeight, halfWidth, height / 2.6F, wingsPaintOutline)
+    }
+
+
+    private fun drawShipOutline(canvas: Canvas) {
         val path = Path()
 
         path.moveTo(halfWidth, halfHeight - jetOuterRadius) // Top
@@ -102,73 +170,5 @@ class SpaceShipView @JvmOverloads constructor(
         canvas.drawPath(path, wingsPaint)
         canvas.drawPath(path, wingsPaintOutline)
 
-    }
-
-    private val sensorManager by lazy {
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    }
-
-    private val gyroscopeSensor: Sensor by lazy {
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    }
-
-    var gravSensorVals = FloatArray(3)
-
-    private val gyroscopeSensorListener = object : SensorEventListener {
-        override fun onSensorChanged(sensorEvent: SensorEvent) {
-//            canvasCenterX = lowPass(sensorEvent.values)
-            roundedSensorValue = sensorEvent.values[1].toInt() % 10F
-            canvasCenterX = map(roundedSensorValue, -10F, 10F, -90F, 90F).toInt().toFloat()
-            when {
-                currentSpeed < canvasCenterX -> {
-                    currentSpeed+=0.5F
-                }
-                currentSpeed > canvasCenterX -> {
-                    currentSpeed-=0.5F
-                }
-                else -> {
-
-                }
-            }
-            invalidate()
-            Log.d(
-                "SensorEventListener",
-                "$canvasCenterX $roundedSensorValue $currentSpeed ${sensorEvent.values[1]}"
-            )
-        }
-
-        override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
-    }
-
-    private fun map(
-        value: Float,
-        startRangeMin: Float,
-        startRangeMax: Float,
-        endRangeMin: Float,
-        endRangeMax: Float
-    ): Float {
-        return (value - startRangeMin) / (startRangeMax - startRangeMin) * (endRangeMax - endRangeMin) + endRangeMin;
-    }
-
-//    val ALPHA = 0.10F
-//
-//    private fun lowPass(
-//        input: FloatArray
-//    ): Float {
-//        gravSensorVals[1] = ALPHA * input[1] + gravSensorVals[1] * 1.0F - ALPHA
-//        return gravSensorVals[1]
-//    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        sensorManager.registerListener(
-            gyroscopeSensorListener,
-            gyroscopeSensor, SensorManager.SENSOR_DELAY_NORMAL
-        )
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        sensorManager.unregisterListener(gyroscopeSensorListener)
     }
 }

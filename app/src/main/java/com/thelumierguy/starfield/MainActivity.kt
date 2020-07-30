@@ -12,6 +12,18 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        goFullScreen()
+        setContentView(R.layout.activity_main)
+        root_view.setOnTouchListener { v, event ->
+            if (event?.action == MotionEvent.ACTION_UP) {
+                space_ship.boost()
+                star_field.setTrails()
+            }
+            true
+        }
+    }
+
+    private fun goFullScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
         } else {
@@ -24,14 +36,6 @@ class MainActivity : AppCompatActivity() {
                     // Hide the nav bar and status bar
                     or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_FULLSCREEN)
-        }
-        setContentView(R.layout.activity_main)
-        root_view.setOnTouchListener { v, event ->
-            if (event?.action == MotionEvent.ACTION_UP) {
-                space_ship.boost()
-                star_field.setTrails()
-            }
-            true
         }
     }
 }
