@@ -15,6 +15,9 @@ class Star(private val width: Int, private val height: Int) {
 
     var speed = 10F
 
+    var menuSpeed = 1F
+    var defaultSpeed = 10F
+
     var minSpeed = 10F
     var maxSpeed = 60F
 

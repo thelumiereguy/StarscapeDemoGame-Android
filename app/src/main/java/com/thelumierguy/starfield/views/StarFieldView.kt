@@ -1,16 +1,16 @@
 package com.thelumierguy.starfield.views
 
 import android.content.Context
-import android.content.Context.SENSOR_SERVICE
 import android.graphics.Canvas
 import android.graphics.Color
-import android.hardware.Sensor
 import android.hardware.SensorEvent
-import android.hardware.SensorManager
-import android.os.Handler
 import android.util.AttributeSet
 import android.view.View
+import com.thelumierguy.starfield.utils.ScreenStates
 import com.thelumierguy.starfield.utils.lowPass
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class StarFieldView @JvmOverloads constructor(
@@ -21,7 +21,7 @@ class StarFieldView @JvmOverloads constructor(
 
     private var enableTrails: Boolean = false
 
-    var translationValue = 0F
+    private var translationValue = 0F
 
     private val starsArray by lazy {
         Array(800, init = {
@@ -29,13 +29,7 @@ class StarFieldView @JvmOverloads constructor(
         })
     }
 
-    private val sensorManager by lazy {
-        context.getSystemService(SENSOR_SERVICE) as SensorManager
-    }
-
-    private val gyroscopeSensor: Sensor by lazy {
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    }
+    private val multiplicationFactor = 10F
 
     var gravityValue = FloatArray(1)
 
@@ -51,7 +45,7 @@ class StarFieldView @JvmOverloads constructor(
         }
         canvas?.let {
             canvas.translate(
-                measuredWidth / 2F + translationValue,
+                measuredWidth / 2F - translationValue,
                 measuredHeight / 2F
             )
             starsArray.forEach { star ->
@@ -69,12 +63,13 @@ class StarFieldView @JvmOverloads constructor(
     }
 
     fun setTrails() {
-        enableTrails = enableTrails != true
-        if (enableTrails)
-            translationValue = 0F
-        Handler().postDelayed({
+        MainScope().launch {
+            enableTrails = enableTrails != true
+            if (enableTrails)
+                translationValue = 0F
+            delay(4000)
             enableTrails = false //disable trails after 4 seconds
-        }, 4000)
+        }
     }
 
 
@@ -83,7 +78,26 @@ class StarFieldView @JvmOverloads constructor(
             0F
         } else {
             lowPass(sensorEvent.values, gravityValue)
-            gravityValue[0] * 40
+            gravityValue[0] * multiplicationFactor
+        }
+    }
+
+    fun processScreenState(screenStates: ScreenStates) {
+        when (screenStates) {
+            ScreenStates.APP_INIT,
+            ScreenStates.GAME_MENU -> {
+                if (isAttachedToWindow) {
+                    enableTrails = false
+                    starsArray.forEach {
+                        it.speed = it.menuSpeed
+                    }
+                }
+            }
+            ScreenStates.START_GAME -> {
+                starsArray.forEach {
+                    it.speed = it.defaultSpeed
+                }
+            }
         }
     }
 }

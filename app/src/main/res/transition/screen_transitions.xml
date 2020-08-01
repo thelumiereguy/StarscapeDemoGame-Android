@@ -5,5 +5,4 @@
     <fade android:duration="@android:integer/config_shortAnimTime" />
     <changeTransform android:duration="1000" />
     <changeBounds android:duration="1000" />
-    <changeImageTransform android:duration="1000" />
 </transitionSet>

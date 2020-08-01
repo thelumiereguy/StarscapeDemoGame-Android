@@ -15,4 +15,5 @@ class MainViewModel : ViewModel() {
         screenStateLiveData.postValue(screenStates)
     }
 
+    fun getCurrentState(): ScreenStates? = observeScreenState().value
 }

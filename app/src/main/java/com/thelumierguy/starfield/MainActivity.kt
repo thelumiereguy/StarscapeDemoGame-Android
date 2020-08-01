@@ -1,17 +1,10 @@
 package com.thelumierguy.starfield
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -21,6 +14,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionInflater
 import androidx.transition.TransitionManager
 import com.thelumierguy.starfield.utils.ScreenStates
+import com.thelumierguy.starfield.views.SpaceShipView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.scene_game_start.*
 import kotlinx.coroutines.Dispatchers
@@ -28,11 +22,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-
-
-    private val sensorManager by lazy {
-        getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    }
 
     private val transitionManager: TransitionManager by lazy {
         TransitionManager().apply {
@@ -42,10 +31,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var mediaPlayer: MediaPlayer? = null
+
+    private var accelerometerManager: AccelerometerManager? = null
+
     val mainViewModel by lazy {
         ViewModelProvider(this)[MainViewModel::class.java]
     }
 
+    val appInitScene: Scene by lazy { createScene(R.layout.scene_app_init) }
+    val gameMenuScene: Scene by lazy { createScene(R.layout.scene_menu) }
+    val startGameScene: Scene by lazy { createScene(R.layout.scene_game_start) }
 
     private val transition: Transition by lazy {
         TransitionInflater.from(this)
@@ -53,48 +49,52 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private val gyroscopeSensor: Sensor by lazy {
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    }
-
-    private val gyroscopeSensorListener = object : SensorEventListener {
-        override fun onSensorChanged(sensorEvent: SensorEvent) {
-//            space_ship?.processSensorEvents(sensorEvent)
-//            star_field?.processSensorEvents(sensorEvent)
-        }
-
-        override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
-    }
-
-    val appInitScene: Scene by lazy { createScene(R.layout.scene_app_init) }
-    val gameMenuScene: Scene by lazy { createScene(R.layout.scene_menu) }
-    val startGameScene: Scene by lazy { createScene(R.layout.scene_game_start) }
-
     fun transitionToScene(scene: Scene) {
         transitionManager.transitionTo(scene)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
         goFullScreen()
-        observeScreenStates()
+        setContentView(R.layout.activity_main)
         addTouchHandler()
+        observeScreenStates()
+        addAccelerometerListener()
         initMenu()
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun addTouchHandler() {
-        root_view.setOnTouchListener { v, event ->
-            if (event?.action == MotionEvent.ACTION_UP) {
-                handleTouch()
+    private fun startMusic() {
+        mediaPlayer = MediaPlayer.create(this, R.raw.music)
+        mediaPlayer?.setOnPreparedListener {
+            it.start()
+        }
+        mediaPlayer?.setOnCompletionListener {
+            it.start()
+        }
+    }
+
+    private fun addAccelerometerListener() {
+        accelerometerManager = AccelerometerManager(this) { sensorEvent ->
+            if (mainViewModel.getCurrentState() == ScreenStates.START_GAME) {
+                startGameScene.sceneRoot.findViewById<SpaceShipView>(R.id.space_ship)
+                    ?.processSensorEvents(sensorEvent)
             }
-            true
+            star_field?.processSensorEvents(sensorEvent)
+        }
+        accelerometerManager?.let {
+            lifecycle.addObserver(it)
+        }
+    }
+
+
+    private fun addTouchHandler() {
+        root_view.setOnClickListener {
+            handleTouch()
         }
     }
 
     private fun handleTouch() {
-        when (mainViewModel.observeScreenState().value) {
+        when (mainViewModel.getCurrentState()) {
             ScreenStates.START_GAME -> {
                 space_ship.boost()
                 star_field.setTrails()
@@ -103,7 +103,6 @@ class MainActivity : AppCompatActivity() {
                 pushUIState(ScreenStates.START_GAME)
             }
             else -> {
-                Toast.makeText(this@MainActivity, "Hello", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -111,26 +110,13 @@ class MainActivity : AppCompatActivity() {
     private fun initMenu() {
         lifecycleScope.launch(Dispatchers.Main) {
             pushUIState(ScreenStates.APP_INIT)
-            delay(600)
+            delay(3000)
             pushUIState(ScreenStates.GAME_MENU)
         }
     }
 
     private fun pushUIState(screenStates: ScreenStates) {
         mainViewModel.updateUIState(screenStates)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        sensorManager.registerListener(
-            gyroscopeSensorListener,
-            gyroscopeSensor, SensorManager.SENSOR_DELAY_GAME
-        )
-    }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(gyroscopeSensorListener)
     }
 
     private fun goFullScreen() {
@@ -153,10 +139,21 @@ class MainActivity : AppCompatActivity() {
         Scene.getSceneForLayout(id_frame as ViewGroup, layout, this)
 
     override fun onBackPressed() {
-        if (mainViewModel.observeScreenState().value == ScreenStates.START_GAME) {
+        if (mainViewModel.getCurrentState() == ScreenStates.START_GAME) {
             pushUIState(ScreenStates.GAME_MENU)
         } else {
             super.onBackPressed()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startMusic()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
     }
 }

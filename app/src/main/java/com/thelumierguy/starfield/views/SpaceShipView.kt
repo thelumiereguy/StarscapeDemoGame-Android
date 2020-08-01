@@ -5,14 +5,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.hardware.Sensor
 import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.os.Handler
 import android.util.AttributeSet
 import android.view.View
 import com.thelumierguy.starfield.utils.lowPass
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class SpaceShipView @JvmOverloads constructor(
@@ -22,15 +21,16 @@ class SpaceShipView @JvmOverloads constructor(
 ) : View(context, attributeSet, defStyle) {
 
     private var rotationValue = 0F
-    val bodyPaint = Paint().apply {
+
+    private val bodyPaint = Paint().apply {
         color = Color.parseColor("#3E4D6C")
     }
 
-    val wingsPaint = Paint().apply {
+    private val wingsPaint = Paint().apply {
         color = Color.parseColor("#A7C5CD")
     }
 
-    val wingsPaintOutline = Paint().apply {
+    private val wingsPaintOutline = Paint().apply {
         color = Color.parseColor("#3E4D6C")
         style = Paint.Style.STROKE
         strokeWidth = 8F
@@ -39,7 +39,7 @@ class SpaceShipView @JvmOverloads constructor(
     }
 
 
-    val jetPaint = Paint().apply {
+    private val jetPaint = Paint().apply {
         color = Color.parseColor("#E9924B")
         setShadowLayer(
             12F,
@@ -48,21 +48,23 @@ class SpaceShipView @JvmOverloads constructor(
         )
     }
 
+    private val multiplicationFactor = 2F
+
     init {
         setLayerType(LAYER_TYPE_HARDWARE, null)
     }
 
-    val jetOuterRadius = 36F
-    var jetInnerRadius = 20F
+    private val jetOuterRadius = 36F
+    private var jetInnerRadius = 20F
 
     private val halfWidth by lazy { width / 2F }
     private val halfHeight by lazy { height / 2F }
 
-    var gravityValue = FloatArray(1)
+    private var gravityValue = FloatArray(1)
 
 
     fun processSensorEvents(sensorEvent: SensorEvent) {
-        lowPass(sensorEvent.values,gravityValue)
+        lowPass(sensorEvent.values, gravityValue)
         magnifyValue()
         invertGravityValue()
         invalidate()
@@ -75,10 +77,10 @@ class SpaceShipView @JvmOverloads constructor(
     private fun invertGravityValue() {
         when {
             rotationValue < -90 -> {
-                gravityValue[0] += 18F
+                gravityValue[0] += 90F
             }
             rotationValue > 90 -> {
-                gravityValue[0] -= 18F
+                gravityValue[0] -= 90F
             }
             else -> {
             }
@@ -86,18 +88,18 @@ class SpaceShipView @JvmOverloads constructor(
     }
 
     private fun magnifyValue() {
-        rotationValue = 10 * gravityValue[0]
+        rotationValue = multiplicationFactor * gravityValue[0]
     }
 
     fun boost() {
-        jetPaint.color = Color.parseColor("#F2463B")
-        jetInnerRadius = 30F
-        Handler().postDelayed({
+        MainScope().launch {
+            jetPaint.color = Color.parseColor("#F2463B")
+            jetInnerRadius = 30F
+            delay(4000)
             jetPaint.color = Color.parseColor("#E9924B")
             jetInnerRadius = 20F
-        }, 4000)
+        }
     }
-
 
 
     override fun onDraw(canvas: Canvas?) {

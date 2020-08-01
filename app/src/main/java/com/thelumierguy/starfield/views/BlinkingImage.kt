@@ -6,7 +6,6 @@ import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import androidx.appcompat.widget.AppCompatImageView
-import kotlinx.android.synthetic.main.scene_menu.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -27,6 +26,10 @@ class BlinkingImage @JvmOverloads constructor(
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+    }
+
     fun startBlinking() {
         MainScope().launch {
             delay(500)
@@ -35,7 +38,12 @@ class BlinkingImage @JvmOverloads constructor(
         }
     }
 
-    fun stopBlinking() {
+    private fun stopBlinking() {
         blinkAnimation.cancel()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        stopBlinking()
     }
 }

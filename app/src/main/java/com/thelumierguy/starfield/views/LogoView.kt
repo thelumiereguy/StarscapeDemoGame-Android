@@ -75,4 +75,9 @@ class LogoView @JvmOverloads constructor(
             yCor = Random.nextInt(0, height).toFloat()
         }
     }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        enableTinkling = false
+    }
 }
