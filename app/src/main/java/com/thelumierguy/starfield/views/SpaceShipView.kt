@@ -1,4 +1,4 @@
-package com.thelumierguy.starfield
+package com.thelumierguy.starfield.views
 
 import android.content.Context
 import android.graphics.Canvas
@@ -58,35 +58,10 @@ class SpaceShipView @JvmOverloads constructor(
     private val halfWidth by lazy { width / 2F }
     private val halfHeight by lazy { height / 2F }
 
-    private val ALPHA = 0.05F
-
-    private val sensorManager by lazy {
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    }
-
-    private val gyroscopeSensor: Sensor by lazy {
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    }
-
     var gravityValue = FloatArray(1)
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        sensorManager.registerListener(
-            gyroscopeSensorListener,
-            gyroscopeSensor, SensorManager.SENSOR_DELAY_NORMAL
-        )
-    }
 
-    private val gyroscopeSensorListener = object : SensorEventListener {
-        override fun onSensorChanged(sensorEvent: SensorEvent) {
-            processSensorEvents(sensorEvent)
-        }
-
-        override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
-    }
-
-    private fun processSensorEvents(sensorEvent: SensorEvent) {
+    fun processSensorEvents(sensorEvent: SensorEvent) {
         lowPass(sensorEvent.values,gravityValue)
         magnifyValue()
         invertGravityValue()
@@ -124,10 +99,6 @@ class SpaceShipView @JvmOverloads constructor(
     }
 
 
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        sensorManager.unregisterListener(gyroscopeSensorListener)
-    }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)

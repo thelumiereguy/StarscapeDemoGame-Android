@@ -1,4 +1,4 @@
-package com.thelumierguy.starfield
+package com.thelumierguy.starfield.views
 
 import android.content.Context
 import android.content.Context.SENSOR_SERVICE
@@ -6,13 +6,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
 import android.util.AttributeSet
 import android.view.View
 import com.thelumierguy.starfield.utils.lowPass
-import com.thelumierguy.starfield.views.Star
 
 
 class StarFieldView @JvmOverloads constructor(
@@ -40,19 +38,6 @@ class StarFieldView @JvmOverloads constructor(
     }
 
     var gravityValue = FloatArray(1)
-
-    private val gyroscopeSensorListener = object : SensorEventListener {
-        override fun onSensorChanged(sensorEvent: SensorEvent) {
-            translationValue = if (enableTrails) {
-                0F
-            } else {
-                lowPass(sensorEvent.values, gravityValue)
-                gravityValue[0] * 40
-            }
-        }
-
-        override fun onAccuracyChanged(sensor: Sensor, i: Int) {}
-    }
 
     init {
         setLayerType(LAYER_TYPE_HARDWARE, null)
@@ -93,17 +78,13 @@ class StarFieldView @JvmOverloads constructor(
     }
 
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        sensorManager.registerListener(
-            gyroscopeSensorListener,
-            gyroscopeSensor, SensorManager.SENSOR_DELAY_GAME
-        )
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        sensorManager.unregisterListener(gyroscopeSensorListener)
+    fun processSensorEvents(sensorEvent: SensorEvent) {
+        translationValue = if (enableTrails) {
+            0F
+        } else {
+            lowPass(sensorEvent.values, gravityValue)
+            gravityValue[0] * 40
+        }
     }
 }
 
