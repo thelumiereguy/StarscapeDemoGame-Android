@@ -11,11 +11,11 @@ class Star(private val width: Int, private val height: Int) {
     var y = Random.nextInt(-height, height).toFloat()
     var z = Random.nextInt(width).toFloat()
 
-    var pz = z
-
-    var speed = 10F
+    var startingLocation = z
 
     var menuSpeed = 1F
+
+    var speed = menuSpeed
     var defaultSpeed = 10F
 
     var minSpeed = 10F
@@ -56,7 +56,7 @@ class Star(private val width: Int, private val height: Int) {
         x = Random.nextInt(-width, width).toFloat()
         y = Random.nextInt(-height, height).toFloat()
         z = width.toFloat()
-        pz = z
+        startingLocation = z
     }
 
 
@@ -111,8 +111,8 @@ class Star(private val width: Int, private val height: Int) {
             0F,
             height.toFloat()
         )
-        val px = map(x / pz, 0F, 1F, 0F, width.toFloat())
-        val py = map(y / pz, 0F, 1F, 0F, height.toFloat())
+        val px = map(x / startingLocation, 0F, 1F, 0F, width.toFloat())
+        val py = map(y / startingLocation, 0F, 1F, 0F, height.toFloat())
         canvas.drawLine(px, py, sx, sy, starTrailsPaint)
     }
 }

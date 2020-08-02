@@ -26,9 +26,6 @@ class BlinkingImage @JvmOverloads constructor(
         }
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-    }
 
     fun startBlinking() {
         MainScope().launch {

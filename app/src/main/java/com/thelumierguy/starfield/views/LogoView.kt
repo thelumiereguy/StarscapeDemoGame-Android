@@ -16,13 +16,14 @@ class LogoView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : AppCompatImageView(context, attributeSet, defStyle) {
 
+    private val paintJob: Job = Job()
+
+
     private val starPaint by lazy {
         Paint().apply {
             color = Color.parseColor("#E4962B")
         }
     }
-
-    private val paintJob: Job = Job()
 
     private val logoTwinkles by lazy {
         List(20) {
@@ -43,9 +44,9 @@ class LogoView @JvmOverloads constructor(
         }
         canvas?.let {
             paintJob.cancelChildren()
-            CoroutineScope(paintJob + Dispatchers.Main).launch {
+            CoroutineScope(paintJob + Dispatchers.Main.immediate).launch {
                 logoTwinkles.forEach {
-                    it.draw(canvas, starPaint)
+                    it.draw(canvas,starPaint)
                 }
                 delay(800)
                 logoTwinkles.forEach {
@@ -56,17 +57,21 @@ class LogoView @JvmOverloads constructor(
             }
 
         }
-
     }
 
-    class LogoTwinkles(val height: Int, val width: Int) {
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        enableTinkling = false
+    }
 
-        var xCor = 0F
-        var yCor = 0F
+    class LogoTwinkles(private val height: Int, private val width: Int) {
+
+        var xCor = width.toFloat()
+        var yCor = height.toFloat()
 
 
-        fun draw(canvas: Canvas, paint: Paint) {
-            canvas.drawCircle(xCor, yCor, 3F, paint)
+        fun draw(canvas: Canvas,starPaint:Paint) {
+            canvas.drawCircle(xCor, yCor, 3F, starPaint)
 
         }
 
@@ -76,8 +81,4 @@ class LogoView @JvmOverloads constructor(
         }
     }
 
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        enableTinkling = false
-    }
 }

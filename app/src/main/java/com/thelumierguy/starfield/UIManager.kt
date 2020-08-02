@@ -1,5 +1,6 @@
 package com.thelumierguy.starfield
 
+import android.widget.ImageView
 import androidx.lifecycle.Observer
 import com.thelumierguy.starfield.utils.ScreenStates
 import com.thelumierguy.starfield.views.BlinkingImage
@@ -22,6 +23,9 @@ fun MainActivity.observeScreenStates() {
             }
             ScreenStates.START_GAME -> {
                 transitionToScene(startGameScene)
+                startGameScene.sceneRoot.findViewById<ImageView>(R.id.iv_pause).setOnClickListener {
+                    onBackPressed()
+                }
             }
         }
     })

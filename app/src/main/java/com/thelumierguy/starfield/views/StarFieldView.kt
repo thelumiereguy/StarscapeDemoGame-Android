@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.hardware.SensorEvent
+import android.os.Build
 import android.util.AttributeSet
 import android.view.View
 import com.thelumierguy.starfield.utils.ScreenStates
@@ -29,12 +30,14 @@ class StarFieldView @JvmOverloads constructor(
         })
     }
 
-    private val multiplicationFactor = 10F
+    private val multiplicationFactor = 2F
 
     var gravityValue = FloatArray(1)
 
     init {
-        setLayerType(LAYER_TYPE_HARDWARE, null)
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
+            setLayerType(LAYER_TYPE_HARDWARE, null)
+        }
         setBackgroundColor(Color.parseColor("#001122"))
     }
 
@@ -45,7 +48,7 @@ class StarFieldView @JvmOverloads constructor(
         }
         canvas?.let {
             canvas.translate(
-                measuredWidth / 2F - translationValue,
+                measuredWidth / 2F + translationValue,
                 measuredHeight / 2F
             )
             starsArray.forEach { star ->
@@ -83,8 +86,7 @@ class StarFieldView @JvmOverloads constructor(
     }
 
     fun processScreenState(screenStates: ScreenStates) {
-        when (screenStates) {
-            ScreenStates.APP_INIT,
+         when (screenStates) {
             ScreenStates.GAME_MENU -> {
                 if (isAttachedToWindow) {
                     enableTrails = false
@@ -98,7 +100,8 @@ class StarFieldView @JvmOverloads constructor(
                     it.speed = it.defaultSpeed
                 }
             }
-        }
+             else -> {}
+         }
     }
 }
 
